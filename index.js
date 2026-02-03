@@ -1,87 +1,78 @@
-const TelegramBot = require('node-telegram-bot-api');
+const express = require("express");
+const TelegramBot = require("node-telegram-bot-api");
 
-const token = '8342838326:AAH6aT7cIvu-kTUufSt5imi-68XYWp6_NDA';
+// 👇 Token tomado desde Render (NO ponerlo manual)
+const token = process.env.BOT_TOKEN;
 
 const bot = new TelegramBot(token, { polling: true });
+const app = express();
 
 let waitingPlayer = null;
 let games = {};
 
-bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, "🎮 Bienvenido al Piedra Papel Tijera\n\nUsá /jugar para buscar rival");
-});
-
-bot.onText(/\/jugar/, (msg) => {
-
-    const userId = msg.from.id;
+// 🎮 Comando /play
+bot.onText(/\/play/, (msg) => {
+    const chatId = msg.chat.id;
 
     if (!waitingPlayer) {
-        waitingPlayer = userId;
-        bot.sendMessage(msg.chat.id, "⏳ Esperando rival...");
+        waitingPlayer = chatId;
+        bot.sendMessage(chatId, "⏳ Esperando otro jugador...");
     } else {
-
         const player1 = waitingPlayer;
-        const player2 = userId;
+        const player2 = chatId;
+
+        games[player1] = { opponent: player2 };
+        games[player2] = { opponent: player1 };
 
         waitingPlayer = null;
 
-        games[player1] = { rival: player2 };
-        games[player2] = { rival: player1 };
-
-        sendGameButtons(player1);
-        sendGameButtons(player2);
+        bot.sendMessage(player1, "🎮 Jugador encontrado! Escribí piedra, papel o tijera");
+        bot.sendMessage(player2, "🎮 Jugador encontrado! Escribí piedra, papel o tijera");
     }
 });
 
-function sendGameButtons(userId) {
-    bot.sendMessage(userId, "Elegí tu jugada", {
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: "🪨 Piedra", callback_data: "piedra" }],
-                [{ text: "📄 Papel", callback_data: "papel" }],
-                [{ text: "✂️ Tijera", callback_data: "tijera" }]
-            ]
-        }
-    });
-}
+// 📩 Recibir jugadas
+bot.on("message", (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text?.toLowerCase();
 
-bot.on("callback_query", (query) => {
+    if (!games[chatId]) return;
 
-    const userId = query.from.id;
-    const move = query.data;
+    const valid = ["piedra", "papel", "tijera"];
+    if (!valid.includes(text)) return;
 
-    if (!games[userId]) return;
+    games[chatId].choice = text;
 
-    games[userId].move = move;
+    const opponent = games[chatId].opponent;
 
-    const rivalId = games[userId].rival;
+    if (games[opponent].choice) {
 
-    if (!games[rivalId].move) {
-        bot.sendMessage(userId, "✅ Jugada enviada, esperando rival...");
-        return;
+        const p1 = games[chatId].choice;
+        const p2 = games[opponent].choice;
+
+        let result = "";
+
+        if (p1 === p2) result = "🤝 Empate";
+        else if (
+            (p1 === "piedra" && p2 === "tijera") ||
+            (p1 === "papel" && p2 === "piedra") ||
+            (p1 === "tijera" && p2 === "papel")
+        ) result = "🏆 Ganaste";
+        else result = "😢 Perdiste";
+
+        bot.sendMessage(chatId, result);
+        bot.sendMessage(opponent, result);
+
+        delete games[chatId];
+        delete games[opponent];
     }
-
-    const move1 = games[userId].move;
-    const move2 = games[rivalId].move;
-
-    const result = getWinner(move1, move2);
-
-    bot.sendMessage(userId, `Resultado: ${result}`);
-    bot.sendMessage(rivalId, `Resultado: ${result}`);
-
-    delete games[userId];
-    delete games[rivalId];
 });
 
-function getWinner(a, b) {
+// 🌐 Servidor Express
+app.get("/", (req, res) => {
+    res.send("Bot activo");
+});
 
-    if (a === b) return "Empate";
-
-    if (
-        (a === "piedra" && b === "tijera") ||
-        (a === "papel" && b === "piedra") ||
-        (a === "tijera" && b === "papel")
-    ) return "Ganaste 🎉";
-
-    return "Perdiste 😢";
-    }
+app.listen(3000, () => {
+    console.log("Servidor iniciado");
+});
