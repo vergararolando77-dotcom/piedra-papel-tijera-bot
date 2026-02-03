@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Piedra Papel Tijera</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(180deg, #0f172a, #020617);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      text-align: center;
+      width: 100%;
+      max-width: 360px;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 8px;
+    }
+    p {
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      font-size: 18px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+    }
+    .piedra { background: #e5e7eb; }
+    .papel { background: #e5e7eb; }
+    .tijera { background: #e5e7eb; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>🪨 Piedra, Papel o Tijera</h1>
+    <p>Elegí tu jugada</p>
+
+    <button class="piedra" onclick="jugar('piedra')">🪨 Piedra</button>
+    <button class="papel" onclick="jugar('papel')">📄 Papel</button>
+    <button class="tijera" onclick="jugar('tijera')">✂️ Tijera</button>
+
+    <p id="estado"></p>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+
+    function jugar(opcion) {
+      document.getElementById("estado").innerText =
+        "Elegiste: " + opcion + " ⏳ Esperando al otro jugador...";
+      
+      tg.sendData(JSON.stringify({
+        jugada: opcion
+      }));
+    }
+  </script>
+</body>
+      </html>
